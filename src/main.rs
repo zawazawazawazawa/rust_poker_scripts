@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use rand::{seq::IteratorRandom, thread_rng};
 
 fn main() {
@@ -46,16 +47,30 @@ fn main() {
     };
 
     let mut rng = thread_rng();
-    let sample = decks.iter().choose_multiple(&mut rng, 7);
 
-    for card in sample.iter() {
-        println!("{:?}", card);
-    };
+    loop {
+        println!("================================");
+        let cards = decks.iter().choose_multiple(&mut rng, 7);
+
+        let groups = cards.into_iter().into_group_map_by(|x| x.suit);
+
+        let mut flush_flag: bool = false;
+        for group in groups.iter() {
+            println!("{:?}: {}", group.0, group.1.len());
+            if group.1.len() >= 5 {
+                flush_flag = true;
+            };
+        };
+        if flush_flag == true {
+            println!("flush!!");
+            break;
+        }
+    }
 }
 
 
 // TODO
-// [] deckからramdomな7枚を取り出せる
+// [x] deckからramdomな7枚を取り出せる
 // [] flushの判定
 // [] straightの判定
 // [] ホールデムの役判定
