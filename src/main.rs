@@ -1,4 +1,4 @@
-use itertools::Itertools;
+use rand::{seq::IteratorRandom, thread_rng};
 
 fn main() {
     let ranks: [String; 13] = [
@@ -25,7 +25,7 @@ fn main() {
     ];
 
     
-    #[derive(Copy, Clone)]
+    #[derive(Copy, Clone, Debug)]
     struct Card<'a> {
         rank: &'a String,
         suit: &'a String,
@@ -45,15 +45,12 @@ fn main() {
         }
     };
 
-    let hands = decks.into_iter().combinations(4);
-    let hand = hands.last().unwrap();
+    let mut rng = thread_rng();
+    let sample = decks.iter().choose_multiple(&mut rng, 7);
 
-    for i in 0..hand.len() {
-        println!("{}", hand[i].rank);
-        println!("{}", hand[i].suit);
-    }
-    
-
+    for card in sample.iter() {
+        println!("{:?}", card);
+    };
 }
 
 
