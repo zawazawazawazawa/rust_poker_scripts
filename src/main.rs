@@ -42,7 +42,7 @@ fn main() {
         Flush,
         Straight,
         ThreeOfAKind,
-        TwoPair, // parisよりpairがメジャーらしい https://english.stackexchange.com/questions/389000/why-is-the-poker-hand-called-two-pair-and-not-two-pairs
+        TwoPair, // pairsよりpairがメジャーらしい https://english.stackexchange.com/questions/389000/why-is-the-poker-hand-called-two-pair-and-not-two-pairs
         OnePair,
         HighCard
     }
@@ -102,15 +102,15 @@ fn main() {
     'outer: loop {
         let cards = decks.iter().choose_multiple(&mut rng, 7);
 
-        let groups = cards.into_iter().into_group_map_by(|x| x.suit);
+        let suit_groups = cards.clone().into_iter().into_group_map_by(|x| x.suit);
 
-        let mut straight_flag: bool = false;
-        for group in groups.iter() {
+        for group in suit_groups.iter() {
             if group.1.len() >= 5 {
                 let mut flush_cards = group.1.clone();
                 flush_cards.sort_by(|a, b| b.sort_key.cmp(&a.sort_key));
 
                 // straight判定
+                let mut straight_flag: bool = false;
                 let mut count: usize = 0;
                 while count <= flush_cards.len() - 5 {
                     if flush_cards[count].sort_key - flush_cards[count + 4].sort_key == 4 {
@@ -132,27 +132,38 @@ fn main() {
                 if straight_flag == true {
                     if flush_cards[0].sort_key == 14 && flush_cards[1].sort_key == 13 && flush_cards[2].sort_key == 12 {
                         hand = Some(Hand::RoyalFlush);
+                        break 'outer;
                     } else {
                         hand = Some(Hand::StraightFlush);
+                        break 'outer;
                     }
                 } else {
                     hand = Some(Hand::Flush);
+                    break 'outer;
                 }
             };
         };
-        match &hand {
-            Some(v) => {
-                println!("finish! Hand is {}", v.to_string());
+
+        let rank_groups = cards.clone().into_iter().into_group_map_by(|x| x.rank);
+        for rank_group in rank_groups.iter() {
+            if rank_group.1.len() == 4 {
+                hand = Some(Hand::FourOfAKind);
                 break 'outer;
-            }
-            None => {
-                println!("unknown hand");
             }
         }
     }
+
+    match &hand {
+           Some(v) => {
+               println!("finish! Hand is {}", v.to_string());
+           }
+           None => {
+               println!("unknown hand");
+           }
+       }
 }
 
 
 // TODO
 // [] ホールデムの役判定
-// [] badugi、2-7、8 or betterの役判定
+// [] badugi、27、8 or betterの役判定
