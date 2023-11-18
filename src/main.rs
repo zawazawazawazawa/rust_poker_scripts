@@ -67,22 +67,48 @@ fn main() {
     let mut rng = thread_rng();
 
     loop {
-        println!("================================");
         let cards = decks.iter().choose_multiple(&mut rng, 7);
 
         let groups = cards.into_iter().into_group_map_by(|x| x.suit);
 
-        let mut flush_flag: bool = false;
-        for mut group in groups.iter() {
+        let mut straight_flag: bool = false;
+        let mut finish_flag:bool = false;
+        for group in groups.iter() {
             if group.1.len() >= 5 {
-                flush_flag = true;
                 let mut flush_cards = group.1.clone();
                 flush_cards.sort_by(|a, b| b.sort_key.cmp(&a.sort_key));
-                println!("{:?}", flush_cards);
+                println!("================================");
+                println!("Flush!!");
+
+                // straight判定
+                let mut count: usize = 0;
+                while count <= flush_cards.len() - 5 {
+                    if flush_cards[count].sort_key - flush_cards[count + 4].sort_key == 4 {
+                        println!("Straight Flush !!!! : {:?}", flush_cards);
+                        straight_flag = true;
+                    }
+                    count += 1;
+                }
+
+                // ASC
+                flush_cards.reverse();
+
+                if straight_flag == false && flush_cards[0].sort_key - flush_cards[3].sort_key == -3 && flush_cards[0].sort_key == 2 && flush_cards.last().unwrap().sort_key == 14 {
+                    println!("Straight Flush !!!! : {:?}", flush_cards);
+                    straight_flag = true;
+                }
+
+                // DESC
+                flush_cards.reverse();
+
+                if straight_flag == true && flush_cards[0].sort_key == 14 && flush_cards[1].sort_key == 13 && flush_cards[2].sort_key == 12 {
+                    println!("Royal Flush !!!! {:?}", flush_cards);
+                    finish_flag = true;
+                }
             };
         };
-        if flush_flag == true {
-            println!("flush!!");
+        if finish_flag == true {
+            println!("finish!!");
             break;
         }
     }
