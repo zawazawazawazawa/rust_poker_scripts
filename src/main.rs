@@ -1,6 +1,66 @@
 use itertools::Itertools;
 use rand::{seq::IteratorRandom, thread_rng};
+use std::collections::HashMap;
 use std::fmt;
+
+#[derive(Copy, Clone, Debug)]
+struct Card<'a> {
+    rank: &'a String,
+    suit: &'a String,
+    sort_key: i32
+}
+
+enum Hand {
+    RoyalFlush,
+    StraightFlush,
+    FourOfAKind,
+    FullHouse,
+    Flush,
+    Straight,
+    ThreeOfAKind,
+    TwoPair, 
+    OnePair,
+    HighCard
+}
+
+impl fmt::Display for Hand {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Hand::RoyalFlush => write!(f, "Royal flush"),
+            Hand::StraightFlush => write!(f, "Straight flush"),
+            Hand::FourOfAKind => write!(f, "Four of a kind"),
+            Hand::FullHouse => write!(f, "Full house"),
+            Hand::Flush => write!(f, "Flush"),
+            Hand::Straight => write!(f, "Straight"),
+            Hand::ThreeOfAKind => write!(f, "Three of a kind"),
+            Hand::TwoPair => write!(f, "Two pair"),
+            Hand::OnePair => write!(f, "One pair"),
+            Hand::HighCard => write!(f, "HighCard")
+        }
+    }
+}
+
+// straight判定
+fn judge_straight(mut cards: Vec::<&Card>) -> bool {
+    let mut count: usize = 0;
+    let mut sort_keys: Vec<i32> = cards.iter().map(|x| x.sort_key).unique().collect();
+    if sort_keys.len() < 5 {
+        return false
+    }
+    while count <= sort_keys.len() - 5 {
+        if sort_keys[count] == sort_keys[count + 1] + 1 && sort_keys[count] == sort_keys[count + 2] + 2 && sort_keys[count] == sort_keys[count + 3] + 3 && sort_keys[count] == sort_keys[count + 4] + 4  {
+            return true;
+        }
+
+        count += 1;
+    }
+
+    if sort_keys[(sort_keys.len() - 5)..] == [5,4,3,2] && sort_keys[0] == 14 {
+        return true;
+    } else {
+        return false;
+    }
+}
 
 fn main() {
     let ranks: [String; 13] = [
@@ -26,45 +86,6 @@ fn main() {
         String::from("club")
     ];
 
-    
-    #[derive(Copy, Clone, Debug)]
-    struct Card<'a> {
-        rank: &'a String,
-        suit: &'a String,
-        sort_key: i32
-    }
-
-    enum Hand {
-        RoyalFlush,
-        StraightFlush,
-        FourOfAKind,
-        FullHouse,
-        Flush,
-        Straight,
-        ThreeOfAKind,
-        TwoPair, // pairsよりpairがメジャーらしい https://english.stackexchange.com/questions/389000/why-is-the-poker-hand-called-two-pair-and-not-two-pairs
-        OnePair,
-        HighCard
-    }
-
-    impl fmt::Display for Hand {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            match self {
-                Hand::RoyalFlush => write!(f, "Royal flush"),
-                Hand::StraightFlush => write!(f, "String flush"),
-                Hand::FourOfAKind => write!(f, "Four of a kind"),
-                Hand::FullHouse => write!(f, "Full house"),
-                Hand::Flush => write!(f, "Flush"),
-                Hand::Straight => write!(f, "Straight"),
-                Hand::ThreeOfAKind => write!(f, "Three of a kind"),
-                Hand::TwoPair => write!(f, "Two pair"),
-                Hand::OnePair => write!(f, "One pair"),
-                Hand::HighCard => write!(f, "HighCard")
-            }
-        }
-    }
-
-    
     let mut decks = Vec::<Card>::new();
 
 
@@ -100,35 +121,16 @@ fn main() {
     let mut hand: Option<Hand> = None;
 
     'outer: loop {
-        let cards = decks.iter().choose_multiple(&mut rng, 7);
+        let cards: Vec::<&Card> = decks.iter().choose_multiple(&mut rng, 7);
 
-        let suit_groups = cards.clone().into_iter().into_group_map_by(|x| x.suit);
-
+        // flushを判定
+        let suit_groups: HashMap<&String, Vec::<&Card>> = cards.clone().into_iter().into_group_map_by(|x| x.suit);
         for group in suit_groups.iter() {
             if group.1.len() >= 5 {
+                // straight flush, royal flushを判定
                 let mut flush_cards = group.1.clone();
                 flush_cards.sort_by(|a, b| b.sort_key.cmp(&a.sort_key));
-
-                // straight判定
-                let mut straight_flag: bool = false;
-                let mut count: usize = 0;
-                while count <= flush_cards.len() - 5 {
-                    if flush_cards[count].sort_key - flush_cards[count + 4].sort_key == 4 {
-                        straight_flag = true;
-                    }
-                    count += 1;
-                }
-
-                // ASC
-                flush_cards.reverse();
-
-                if straight_flag == false && flush_cards[0].sort_key - flush_cards[3].sort_key == -3 && flush_cards[0].sort_key == 2 && flush_cards.last().unwrap().sort_key == 14 {
-                    straight_flag = true;
-                }
-
-                // DESC
-                flush_cards.reverse();
-
+                let mut straight_flag: bool = judge_straight(flush_cards.clone());
                 if straight_flag == true {
                     if flush_cards[0].sort_key == 14 && flush_cards[1].sort_key == 13 && flush_cards[2].sort_key == 12 {
                         hand = Some(Hand::RoyalFlush);
@@ -144,12 +146,23 @@ fn main() {
             };
         };
 
+        // quadsを判定
         let rank_groups = cards.clone().into_iter().into_group_map_by(|x| x.rank);
         for rank_group in rank_groups.iter() {
             if rank_group.1.len() == 4 {
                 hand = Some(Hand::FourOfAKind);
                 break 'outer;
             }
+        }
+
+        // TODO
+        // straightの判定が正しくできていない。関数側は重複のないVector<Card>が渡されることを期待しているので
+        // 関数に渡す前にrankでuniqにしてあげる必要がある。
+        let mut cards2: Vec::<&Card> = cards.clone();
+        cards2.sort_by(|a, b| b.sort_key.cmp(&a.sort_key));
+        if judge_straight(cards2.clone()) {
+            hand = Some(Hand::Straight);
+            break 'outer;
         }
     }
 
