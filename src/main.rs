@@ -30,6 +30,7 @@ fn main() {
     struct Card<'a> {
         rank: &'a String,
         suit: &'a String,
+        sort_key: i32
     }
     
     let mut decks = Vec::<Card>::new();
@@ -40,7 +41,24 @@ fn main() {
             decks.push(
                 Card {
                     rank: &ranks[i],
-                    suit: &suits[j]
+                    suit: &suits[j],
+                    sort_key: match ranks[i].as_str() {
+                        "A" => {
+                            14
+                        }
+                        "K" => {
+                            13
+                        }
+                        "Q" => {
+                            12
+                        }
+                        "J" => {
+                            11
+                        }
+                        _ => {
+                            ranks[i].as_str().parse::<i32>().unwrap()
+                        }
+                    }
                 }
             );
         }
@@ -55,10 +73,12 @@ fn main() {
         let groups = cards.into_iter().into_group_map_by(|x| x.suit);
 
         let mut flush_flag: bool = false;
-        for group in groups.iter() {
-            println!("{:?}: {}", group.0, group.1.len());
+        for mut group in groups.iter() {
             if group.1.len() >= 5 {
                 flush_flag = true;
+                let mut flush_cards = group.1.clone();
+                flush_cards.sort_by(|a, b| b.sort_key.cmp(&a.sort_key));
+                println!("{:?}", flush_cards);
             };
         };
         if flush_flag == true {
@@ -71,7 +91,8 @@ fn main() {
 
 // TODO
 // [x] deckからramdomな7枚を取り出せる
-// [] flushの判定
+// [x] flushの判定
+//rustc --explain E0716/ [] straight flushの判定
 // [] straightの判定
 // [] ホールデムの役判定
 // [] badugi、2-7、8 or betterの役判定
