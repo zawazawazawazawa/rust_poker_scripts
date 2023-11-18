@@ -1,5 +1,6 @@
 use itertools::Itertools;
 use rand::{seq::IteratorRandom, thread_rng};
+use std::fmt;
 
 fn main() {
     let ranks: [String; 13] = [
@@ -32,6 +33,37 @@ fn main() {
         suit: &'a String,
         sort_key: i32
     }
+
+    enum Hand {
+        RoyalFlush,
+        StraightFlush,
+        FourOfAKind,
+        FullHouse,
+        Flush,
+        Straight,
+        ThreeOfAKind,
+        TwoPair, // parisよりpairがメジャーらしい https://english.stackexchange.com/questions/389000/why-is-the-poker-hand-called-two-pair-and-not-two-pairs
+        OnePair,
+        HighCard
+    }
+
+    impl fmt::Display for Hand {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            match self {
+                Hand::RoyalFlush => write!(f, "Royal flush"),
+                Hand::StraightFlush => write!(f, "String flush"),
+                Hand::FourOfAKind => write!(f, "Four of a kind"),
+                Hand::FullHouse => write!(f, "Full house"),
+                Hand::Flush => write!(f, "Flush"),
+                Hand::Straight => write!(f, "Straight"),
+                Hand::ThreeOfAKind => write!(f, "Three of a kind"),
+                Hand::TwoPair => write!(f, "Two pair"),
+                Hand::OnePair => write!(f, "One pair"),
+                Hand::HighCard => write!(f, "HighCard")
+            }
+        }
+    }
+
     
     let mut decks = Vec::<Card>::new();
 
@@ -65,26 +97,23 @@ fn main() {
     };
 
     let mut rng = thread_rng();
+    let mut hand: Option<Hand> = None;
 
-    loop {
+    'outer: loop {
         let cards = decks.iter().choose_multiple(&mut rng, 7);
 
         let groups = cards.into_iter().into_group_map_by(|x| x.suit);
 
         let mut straight_flag: bool = false;
-        let mut finish_flag:bool = false;
         for group in groups.iter() {
             if group.1.len() >= 5 {
                 let mut flush_cards = group.1.clone();
                 flush_cards.sort_by(|a, b| b.sort_key.cmp(&a.sort_key));
-                println!("================================");
-                println!("Flush!!");
 
                 // straight判定
                 let mut count: usize = 0;
                 while count <= flush_cards.len() - 5 {
                     if flush_cards[count].sort_key - flush_cards[count + 4].sort_key == 4 {
-                        println!("Straight Flush !!!! : {:?}", flush_cards);
                         straight_flag = true;
                     }
                     count += 1;
@@ -94,31 +123,36 @@ fn main() {
                 flush_cards.reverse();
 
                 if straight_flag == false && flush_cards[0].sort_key - flush_cards[3].sort_key == -3 && flush_cards[0].sort_key == 2 && flush_cards.last().unwrap().sort_key == 14 {
-                    println!("Straight Flush !!!! : {:?}", flush_cards);
                     straight_flag = true;
                 }
 
                 // DESC
                 flush_cards.reverse();
 
-                if straight_flag == true && flush_cards[0].sort_key == 14 && flush_cards[1].sort_key == 13 && flush_cards[2].sort_key == 12 {
-                    println!("Royal Flush !!!! {:?}", flush_cards);
-                    finish_flag = true;
+                if straight_flag == true {
+                    if flush_cards[0].sort_key == 14 && flush_cards[1].sort_key == 13 && flush_cards[2].sort_key == 12 {
+                        hand = Some(Hand::RoyalFlush);
+                    } else {
+                        hand = Some(Hand::StraightFlush);
+                    }
+                } else {
+                    hand = Some(Hand::Flush);
                 }
             };
         };
-        if finish_flag == true {
-            println!("finish!!");
-            break;
+        match &hand {
+            Some(v) => {
+                println!("finish! Hand is {}", v.to_string());
+                break 'outer;
+            }
+            None => {
+                println!("unknown hand");
+            }
         }
     }
 }
 
 
 // TODO
-// [x] deckからramdomな7枚を取り出せる
-// [x] flushの判定
-//rustc --explain E0716/ [] straight flushの判定
-// [] straightの判定
 // [] ホールデムの役判定
 // [] badugi、2-7、8 or betterの役判定
