@@ -155,14 +155,33 @@ fn main() {
             }
         }
 
-        // TODO
-        // straightの判定が正しくできていない。関数側は重複のないVector<Card>が渡されることを期待しているので
-        // 関数に渡す前にrankでuniqにしてあげる必要がある。
         let mut cards2: Vec::<&Card> = cards.clone();
         cards2.sort_by(|a, b| b.sort_key.cmp(&a.sort_key));
         if judge_straight(cards2.clone()) {
             hand = Some(Hand::Straight);
             break 'outer;
+        }
+
+        // TODO: quads判定とtrips判定で2回回しているので一回で判定できるか検討
+        let mut trips_flag: bool = false;
+        let mut pair_flag: bool = false;
+        for rank_group in rank_groups.iter() {
+            if rank_group.1.len() == 3 {
+                trips_flag = true;
+            } else if rank_group.1.len() == 2 {
+                pair_flag = true;
+            }
+        }
+
+            
+        if trips_flag {
+            if pair_flag {
+                hand = Some(Hand::FullHouse);
+                break 'outer;
+            } else {
+                hand = Some(Hand::ThreeOfAKind);
+                break 'outer;
+            }
         }
     }
 
