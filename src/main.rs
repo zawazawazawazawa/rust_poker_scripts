@@ -41,9 +41,9 @@ impl fmt::Display for Hand {
 }
 
 // straight判定
-fn judge_straight(mut cards: Vec::<&Card>) -> bool {
+fn judge_straight(cards: Vec::<&Card>) -> bool {
     let mut count: usize = 0;
-    let mut sort_keys: Vec<i32> = cards.iter().map(|x| x.sort_key).unique().collect();
+    let sort_keys: Vec<i32> = cards.iter().map(|x| x.sort_key).unique().collect();
     if sort_keys.len() < 5 {
         return false
     }
@@ -130,16 +130,25 @@ fn main() {
                 // straight flush, royal flushを判定
                 let mut flush_cards = group.1.clone();
                 flush_cards.sort_by(|a, b| b.sort_key.cmp(&a.sort_key));
-                let mut straight_flag: bool = judge_straight(flush_cards.clone());
+                let straight_flag: bool = judge_straight(flush_cards.clone());
                 if straight_flag == true {
                     if flush_cards[0].sort_key == 14 && flush_cards[1].sort_key == 13 && flush_cards[2].sort_key == 12 {
+                        for card in cards.iter() {
+                            println!("card: {:?}", card);
+                        }
                         hand = Some(Hand::RoyalFlush);
                         break 'outer;
                     } else {
+                        for card in cards.iter() {
+                            println!("card: {:?}", card);
+                        }
                         hand = Some(Hand::StraightFlush);
                         break 'outer;
                     }
                 } else {
+                    for card in cards.iter() {
+                        println!("card: {:?}", card);
+                    }
                     hand = Some(Hand::Flush);
                     break 'outer;
                 }
@@ -150,6 +159,9 @@ fn main() {
         let rank_groups = cards.clone().into_iter().into_group_map_by(|x| x.rank);
         for rank_group in rank_groups.iter() {
             if rank_group.1.len() == 4 {
+                for card in cards.iter() {
+                    println!("card: {:?}", card);
+                }
                 hand = Some(Hand::FourOfAKind);
                 break 'outer;
             }
@@ -158,10 +170,14 @@ fn main() {
         let mut cards2: Vec::<&Card> = cards.clone();
         cards2.sort_by(|a, b| b.sort_key.cmp(&a.sort_key));
         if judge_straight(cards2.clone()) {
+            for card in cards.iter() {
+                println!("card: {:?}", card);
+            }
             hand = Some(Hand::Straight);
             break 'outer;
         }
 
+        // full house と tripsを判定
         // TODO: quads判定とtrips判定で2回回しているので一回で判定できるか検討
         let mut trips_flag: bool = false;
         let mut pair_flag: bool = false;
@@ -176,13 +192,44 @@ fn main() {
             
         if trips_flag {
             if pair_flag {
+                for card in cards.iter() {
+                    println!("card: {:?}", card);
+                }
                 hand = Some(Hand::FullHouse);
                 break 'outer;
             } else {
+                for card in cards.iter() {
+                    println!("card: {:?}", card);
+                }
                 hand = Some(Hand::ThreeOfAKind);
                 break 'outer;
             }
         }
+
+        // two pair, pair, highcardを判定
+        let rank_counts: Vec<usize> = rank_groups.into_iter().map(|x| x.1.len()).collect();
+
+        let pair_count = rank_counts.into_iter().filter(|&x| x == 2).collect::<Vec<usize>>().len();
+
+        if pair_count >= 2 {
+            for card in cards.iter() {
+                println!("card: {:?}", card);
+            }
+            hand = Some(Hand::TwoPair);
+        } else if pair_count == 1 {
+            for card in cards.iter() {
+                println!("card: {:?}", card);
+            }
+            hand = Some(Hand::OnePair);
+        } else {
+            for card in cards.iter() {
+                println!("card: {:?}", card);
+            }
+            hand = Some(Hand::HighCard);
+        }
+
+        break 'outer;
+
     }
 
     match &hand {
