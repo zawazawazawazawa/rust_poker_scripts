@@ -244,5 +244,6 @@ fn main() {
 
 
 // TODO
-// [] ホールデムの役判定
-// [] badugi、27、8 or betterの役判定
+// card7枚を二組用意してどっちが勝ったかの判定
+// test
+// badugi、27、8 or betterの役判定
