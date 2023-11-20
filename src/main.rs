@@ -62,6 +62,91 @@ fn judge_straight(cards: Vec::<&Card>) -> bool {
     }
 }
 
+fn judge_hand_strength(hand: &Hand) -> i32 {
+    match hand {
+        Hand::RoyalFlush => 1,
+        Hand::StraightFlush => 2,
+        Hand::FourOfAKind => 3,
+        Hand::FullHouse => 4,
+        Hand::Flush => 5,
+        Hand::Straight => 6,
+        Hand::ThreeOfAKind => 7,
+        Hand::TwoPair => 8, 
+        Hand::OnePair => 9,
+        Hand::HighCard => 10,
+    }
+}
+
+fn judge_hand(cards: &Vec<&Card>) -> Hand {
+    // flushを判定
+    let suit_groups: HashMap<&String, Vec::<&Card>> = cards.clone().into_iter().into_group_map_by(|x| x.suit);
+    for group in suit_groups.iter() {
+        if group.1.len() >= 5 {
+            // straight flush, royal flushを判定
+            let mut flush_cards = group.1.clone();
+            flush_cards.sort_by(|a, b| b.sort_key.cmp(&a.sort_key));
+            let straight_flag: bool = judge_straight(flush_cards.clone());
+            if straight_flag == true {
+                if flush_cards[0].sort_key == 14 && flush_cards[1].sort_key == 13 && flush_cards[2].sort_key == 12 {
+                    return Hand::RoyalFlush;
+                } else {
+                    return Hand::StraightFlush;
+                }
+            } else {
+                return Hand::Flush;
+            }
+        };
+    };
+
+    // quadsを判定
+    let rank_groups = cards.clone().into_iter().into_group_map_by(|x| x.rank);
+    for rank_group in rank_groups.iter() {
+        if rank_group.1.len() == 4 {
+            return Hand::FourOfAKind;
+        }
+    }
+
+    let mut cards2: Vec::<&Card> = cards.clone();
+    cards2.sort_by(|a, b| b.sort_key.cmp(&a.sort_key));
+    if judge_straight(cards2.clone()) {
+        return Hand::Straight;
+    }
+
+    // full house と tripsを判定
+    // TODO: quads判定とtrips判定で2回回しているので一回で判定できるか検討
+    let mut trips_flag: bool = false;
+    let mut pair_flag: bool = false;
+    for rank_group in rank_groups.iter() {
+        if rank_group.1.len() == 3 {
+            trips_flag = true
+        } else if rank_group.1.len() == 2 {
+            pair_flag = true;
+        }
+    }
+
+            
+    if trips_flag {
+        if pair_flag {
+            return Hand::FullHouse;
+        } else {
+            return Hand::ThreeOfAKind;
+        }
+    }
+
+    // two pair, pair, highcardを判定
+    let rank_counts: Vec<usize> = rank_groups.into_iter().map(|x| x.1.len()).collect();
+
+    let pair_count = rank_counts.into_iter().filter(|&x| x == 2).collect::<Vec<usize>>().len();
+
+    if pair_count >= 2 {
+        return Hand::TwoPair;
+    } else if pair_count == 1 {
+        return Hand::OnePair;
+    } else {
+        return Hand::HighCard;
+    }
+}
+
 fn main() {
     let ranks: [String; 13] = [
         String::from("A"),
@@ -88,7 +173,7 @@ fn main() {
 
     let mut decks = Vec::<Card>::new();
 
-
+    // deckを準備
     for i in 0..ranks.len() {
         for j in 0..suits.len() {
             decks.push(
@@ -118,109 +203,40 @@ fn main() {
     };
 
     let mut rng = thread_rng();
-    let hand: Hand;
-    let seven_cards: Vec<&Card>;
+    let player_1_hand: Hand;
+    let player_2_hand: Hand;
+    let player_1_cards: Vec::<&Card> = decks.iter().choose_multiple(&mut rng, 7);
+    let player_2_cards: Vec::<&Card> = decks.iter().choose_multiple(&mut rng, 7);
 
-    'outer: loop {
-        let cards: Vec::<&Card> = decks.iter().choose_multiple(&mut rng, 7);
+    player_1_hand = judge_hand(&player_1_cards);
+    player_2_hand = judge_hand(&player_2_cards);
 
-        // flushを判定
-        let suit_groups: HashMap<&String, Vec::<&Card>> = cards.clone().into_iter().into_group_map_by(|x| x.suit);
-        for group in suit_groups.iter() {
-            if group.1.len() >= 5 {
-                // straight flush, royal flushを判定
-                let mut flush_cards = group.1.clone();
-                flush_cards.sort_by(|a, b| b.sort_key.cmp(&a.sort_key));
-                let straight_flag: bool = judge_straight(flush_cards.clone());
-                if straight_flag == true {
-                    if flush_cards[0].sort_key == 14 && flush_cards[1].sort_key == 13 && flush_cards[2].sort_key == 12 {
-                        seven_cards = cards;
-                        hand = Hand::RoyalFlush;
-                        break 'outer;
-                    } else {
-                        seven_cards = cards;
-                        hand = Hand::StraightFlush;
-                        break 'outer;
-                    }
-                } else {
-                    seven_cards = cards;
-                    hand = Hand::Flush;
-                    break 'outer;
-                }
-            };
-        };
-
-        // quadsを判定
-        let rank_groups = cards.clone().into_iter().into_group_map_by(|x| x.rank);
-        for rank_group in rank_groups.iter() {
-            if rank_group.1.len() == 4 {
-                seven_cards = cards;
-                hand = Hand::FourOfAKind;
-                break 'outer;
-            }
-        }
-
-        let mut cards2: Vec::<&Card> = cards.clone();
-        cards2.sort_by(|a, b| b.sort_key.cmp(&a.sort_key));
-        if judge_straight(cards2.clone()) {
-            seven_cards = cards2;
-            hand = Hand::Straight;
-            break 'outer;
-        }
-
-        // full house と tripsを判定
-        // TODO: quads判定とtrips判定で2回回しているので一回で判定できるか検討
-        let mut trips_flag: bool = false;
-        let mut pair_flag: bool = false;
-        for rank_group in rank_groups.iter() {
-            if rank_group.1.len() == 3 {
-                trips_flag = true;
-            } else if rank_group.1.len() == 2 {
-                pair_flag = true;
-            }
-        }
-
-            
-        if trips_flag {
-            if pair_flag {
-                seven_cards = cards2;
-                hand = Hand::FullHouse;
-                break 'outer;
-            } else {
-                seven_cards = cards2;
-                hand = Hand::ThreeOfAKind;
-                break 'outer;
-            }
-        }
-
-        // two pair, pair, highcardを判定
-        let rank_counts: Vec<usize> = rank_groups.into_iter().map(|x| x.1.len()).collect();
-
-        let pair_count = rank_counts.into_iter().filter(|&x| x == 2).collect::<Vec<usize>>().len();
-
-        if pair_count >= 2 {
-            seven_cards = cards2;
-            hand = Hand::TwoPair;
-        } else if pair_count == 1 {
-            seven_cards = cards2;
-            hand = Hand::OnePair;
-        } else {
-            seven_cards = cards2;
-            hand = Hand::HighCard;
-        }
-
-        break 'outer;
-
+    if judge_hand_strength(&player_1_hand) < judge_hand_strength(&player_2_hand) {
+        println!("Win player 1")
+    } else if judge_hand_strength(&player_1_hand) > judge_hand_strength(&player_2_hand) {
+        println!("Win player 2")
+    } else {
+        // TODO implementation
+        println!("draw")
     }
 
-    for card in seven_cards {
+    for card in player_1_cards {
         println!("{:?}", card);
     };
-    println!("finish! Hand is {}", hand.to_string());
+    println!("hand strength: {}", judge_hand_strength(&player_1_hand));
+    println!("finish! Hand is {}", player_1_hand.to_string());
+    
+    for card in player_2_cards {
+        println!("{:?}", card);
+    };
+    println!("hand strength: {}", judge_hand_strength(&player_2_hand));
+    println!("finish! Hand is {}", player_2_hand.to_string());
+
+    
 }
 
 
 // TODO
 // card7枚を二組用意してどっちが勝ったかの判定
 // test
-// badugi、27、8 or betterの役判定
+// badugi、27、8 or
