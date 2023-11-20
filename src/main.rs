@@ -118,7 +118,8 @@ fn main() {
     };
 
     let mut rng = thread_rng();
-    let mut hand: Option<Hand> = None;
+    let hand: Hand;
+    let seven_cards: Vec<&Card>;
 
     'outer: loop {
         let cards: Vec::<&Card> = decks.iter().choose_multiple(&mut rng, 7);
@@ -133,23 +134,17 @@ fn main() {
                 let straight_flag: bool = judge_straight(flush_cards.clone());
                 if straight_flag == true {
                     if flush_cards[0].sort_key == 14 && flush_cards[1].sort_key == 13 && flush_cards[2].sort_key == 12 {
-                        for card in cards.iter() {
-                            println!("card: {:?}", card);
-                        }
-                        hand = Some(Hand::RoyalFlush);
+                        seven_cards = cards;
+                        hand = Hand::RoyalFlush;
                         break 'outer;
                     } else {
-                        for card in cards.iter() {
-                            println!("card: {:?}", card);
-                        }
-                        hand = Some(Hand::StraightFlush);
+                        seven_cards = cards;
+                        hand = Hand::StraightFlush;
                         break 'outer;
                     }
                 } else {
-                    for card in cards.iter() {
-                        println!("card: {:?}", card);
-                    }
-                    hand = Some(Hand::Flush);
+                    seven_cards = cards;
+                    hand = Hand::Flush;
                     break 'outer;
                 }
             };
@@ -159,10 +154,8 @@ fn main() {
         let rank_groups = cards.clone().into_iter().into_group_map_by(|x| x.rank);
         for rank_group in rank_groups.iter() {
             if rank_group.1.len() == 4 {
-                for card in cards.iter() {
-                    println!("card: {:?}", card);
-                }
-                hand = Some(Hand::FourOfAKind);
+                seven_cards = cards;
+                hand = Hand::FourOfAKind;
                 break 'outer;
             }
         }
@@ -170,10 +163,8 @@ fn main() {
         let mut cards2: Vec::<&Card> = cards.clone();
         cards2.sort_by(|a, b| b.sort_key.cmp(&a.sort_key));
         if judge_straight(cards2.clone()) {
-            for card in cards.iter() {
-                println!("card: {:?}", card);
-            }
-            hand = Some(Hand::Straight);
+            seven_cards = cards2;
+            hand = Hand::Straight;
             break 'outer;
         }
 
@@ -192,16 +183,12 @@ fn main() {
             
         if trips_flag {
             if pair_flag {
-                for card in cards.iter() {
-                    println!("card: {:?}", card);
-                }
-                hand = Some(Hand::FullHouse);
+                seven_cards = cards2;
+                hand = Hand::FullHouse;
                 break 'outer;
             } else {
-                for card in cards.iter() {
-                    println!("card: {:?}", card);
-                }
-                hand = Some(Hand::ThreeOfAKind);
+                seven_cards = cards2;
+                hand = Hand::ThreeOfAKind;
                 break 'outer;
             }
         }
@@ -212,34 +199,24 @@ fn main() {
         let pair_count = rank_counts.into_iter().filter(|&x| x == 2).collect::<Vec<usize>>().len();
 
         if pair_count >= 2 {
-            for card in cards.iter() {
-                println!("card: {:?}", card);
-            }
-            hand = Some(Hand::TwoPair);
+            seven_cards = cards2;
+            hand = Hand::TwoPair;
         } else if pair_count == 1 {
-            for card in cards.iter() {
-                println!("card: {:?}", card);
-            }
-            hand = Some(Hand::OnePair);
+            seven_cards = cards2;
+            hand = Hand::OnePair;
         } else {
-            for card in cards.iter() {
-                println!("card: {:?}", card);
-            }
-            hand = Some(Hand::HighCard);
+            seven_cards = cards2;
+            hand = Hand::HighCard;
         }
 
         break 'outer;
 
     }
 
-    match &hand {
-           Some(v) => {
-               println!("finish! Hand is {}", v.to_string());
-           }
-           None => {
-               println!("unknown hand");
-           }
-       }
+    for card in seven_cards {
+        println!("{:?}", card);
+    };
+    println!("finish! Hand is {}", hand.to_string());
 }
 
 
